@@ -1,126 +1,58 @@
-import { randomUUID } from "crypto";
-import { APIActions } from "./constants";
-import { RequestHeaders } from "./readerHeader.types";
-import { SearchRequest, SearchRequestBody } from "./requestModel.types";
-import { SoapBody, SoapHeader, SoapRequest } from "./soap.types";
+import { SoapRequest, SoapHeader, SoapBody } from "./soap.types";
 
 
-export class SoapRequestBuilder {
+export abstract class SoapRequestBuilder<Actions extends { [K in keyof Actions]: SoapRequest<any, any> }> {
 
+  protected readonly namespaces: Record<string, string>;
 
-    constructor(){
+  protected request: Actions[keyof Actions] | null = null;
 
+  constructor(schema: Record<string, string>) {
+    this.namespaces = schema;
+    this.request = null!
+  }
+
+  abstract getRequestByAction<Action extends keyof Actions>(action: Action): this
+
+  build() {
+
+    if (!this.request) {
+      throw new Error("No request has been built yet");
     }
 
-    getRequestByAction<Action extends keyof APIActions>(action: Action): APIActions[Action] {
-        switch (action) {
-            case "search":
-                return this.buildSearchRequest() as APIActions[Action];
-            default:
-                throw new Error(`Unsupported action: ${action}`);
+    const transform = (obj: any, parentKey?: string): any => {
+      if (obj === null || obj === undefined) return obj;
+
+      if (Array.isArray(obj)) {
+        // repeat the same tag for each array element
+        return { [parentKey!]: obj.map((item) => transform(item, parentKey)) };
+      }
+
+      if (typeof obj === "object") {
+        const { prefix, attributes, value, ...rest } = obj;
+
+        // primitive value with prefix
+        if ("value" in obj) {
+          const key = prefix && parentKey ? `${prefix}:${parentKey}` : parentKey!;
+          return { [key]: value };
         }
-    }
 
-    private buildSearchRequest() : SearchRequest {
-        
-        const searchRequest : SearchRequest = {
+        // nested object with attributes
+        const result: any = { ...(attributes || {}) };
 
-            "soap:Envelope": {
-                "soap:Header": this.getHeaders(),
-                "soap:Body": this.getSearchRequestBody()
-            }
+        for (const [childKey, childVal] of Object.entries(rest)) {
+          Object.assign(result, transform(childVal, childKey));
         }
 
-        return searchRequest;
-    }
+        return parentKey ? { [parentKey]: result } : result;
+      }
 
-    private getHeaders() : SoapHeader<RequestHeaders> {
-        
-        const headers: SoapHeader<RequestHeaders> = {
-            prefix: "wsse",
-            attributes: { "@_xmlns:wsse": "http://docs.oasis-open.org/wss/" },
-            authentication: {
-                prefix: "wsse",
-                attributes: { "@_mustUnderstand": "1" },
-                token: {
-                    prefix: "wsse",
-                    attributes: { "@_Type": "UUID" },
-                    value: randomUUID()
-                },
-                keepAlive: {
-                    prefix: "wsse",
-                    attributes: { "@_unit": "minutes" },
-                    value: 15
-                },
-                createdAt: {
-                    prefix: "wsse",
-                    attributes: { "@_tz": "UTC" },
-                    value: new Date().toISOString()
-                }
-            },
-            session: {
-                prefix: "wsse",
-                attributes: { "@_idType": "GUID" },
-                value: randomUUID()
-            }
-        };
+      return obj;
+    };
 
-        return headers;
-    }
-
-    private getSearchRequestBody(): SoapBody<SearchRequestBody> {
-
-        const searchRequestBody: SoapBody<SearchRequestBody> = {
-            prefix: "n1",
-            attributes: { "@_xmlns:n1": "http://www.iata.org/IATA/2015/EASD/00/IATA_OffersAndOrdersMessage" },
-            origin: {
-                prefix: "cns",
-                attributes: { "@_city": "true" },
-                value: "DEL"
-            },
-            destination: {
-                prefix: "cns",
-                attributes: { "@_city": "true" },
-                value: "BOM"
-            },
-            date: {
-                prefix: "cns",
-                attributes: { "@_format": "yyyy-MM-dd" },
-                value: new Date().toDateString()
-            },
-            pax: [
-                {
-                    prefix: "cns",
-                    attributes: { "@_id": "P1" },
-                    paxType: {
-                        prefix: "cns",
-                        attributes: { "@_code": "ADT" },
-                        value: "ADT"
-                    },
-                    count: {
-                        prefix: "cns",
-                        attributes: { "@_num": "true" },
-                        value: 1
-                    }
-                },
-                {
-                    prefix: "cns",
-                    attributes: { "@_id": "P2" },
-                    paxType: {
-                        prefix: "cns",
-                        attributes: { "@_code": "CHD" },
-                        value: "CHD"
-                    },
-                    count: {
-                        prefix: "cns",
-                        attributes: { "@_num": "true" },
-                        value: 1
-                    }
-                }
-            ]
-        };
+    return transform(this.request);
+  }
 
 
-        return searchRequestBody;
-    }
+
 }

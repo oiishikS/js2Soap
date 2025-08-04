@@ -1,14 +1,13 @@
-export interface SoapRequest<H, B> {
-  "soap:Envelope": SoapEnvelope<H, B>;
-}
+export type SoapAttribute = `@_${string}`;
 
-export interface SoapEnvelope<H, B> {
-  "soap:Header": SoapHeader<H>;
-  "soap:Body": SoapBody<B>;
-}
+export type SoapMetaData = {
+  prefix?: string; 
+  attributes?: Record<SoapAttribute, string>;
+};
 
-export type SoapHeader<T> = SoapData<T>;
-export type SoapBody<T> = SoapData<T>;
+export type SoapTag = {
+  prefix?: string
+}
 
 export type PrimitiveType =
   | number
@@ -22,17 +21,21 @@ export type PrimitiveType =
 
 export type SoapData<T> = SoapMetaData & {
   [K in keyof T]: T[K] extends PrimitiveType
-    ? SoapMetaData & { value: T[K] }
+    ? SoapTag & { value: T[K] }
     : T[K] extends Array<infer U>
-    ? (SoapMetaData & SoapData<U>)[]
+    ? (SoapTag & SoapData<U>)[]
     : T[K] extends object
     ? SoapMetaData & SoapData<T[K]>
     : SoapMetaData & { value: T[K] };
 };
 
-export type SoapMetaData = {
-  prefix?: string;
-  attributes?: Record<SoapAttribute, string>;
-};
+export type SoapHeader<T> = SoapData<T>;
+export type SoapBody<T> = SoapData<T>;
 
-export type SoapAttribute = `@_${string}`
+export interface SoapRequest<H, B> {
+  "soap:Envelope": {
+     attributes?: Record<SoapAttribute, string>;
+    "soap:Header": SoapHeader<H>;
+    "soap:Body": SoapBody<B>;
+  };
+}
