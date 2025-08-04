@@ -1,4 +1,4 @@
-import { SoapRequest } from "./soap.types";
+import { SoapRequest } from "../globals/soap.types";
 import { RequestHeaders } from "./readerHeader.types";
 
 export interface SearchRequestBody {

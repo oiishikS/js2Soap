@@ -1,21 +1,21 @@
 import { randomUUID } from "crypto";
 import { RequestHeaders } from "./readerHeader.types";
 import { SearchRequest, SearchRequestBody } from "./requestModel.types";
-import { SoapHeader, SoapBody } from "./soap.types";
-import { AmadeusNDCNameSpaces, AmadeusNDCNameSpaceType, NDCAPIActions } from "./constants";
-import { SoapRequestBuilder } from "./builder";
+import { SoapHeader, SoapBody } from "../globals/soap.types";
+import { Soap_NameSpaces, NameSpacesType, API_Actions } from "./constants";
+import { SoapRequestBuilder } from "../globals/builder";
 
 
-export class NDCRequestBuilder extends SoapRequestBuilder<NDCAPIActions>{
+export class RequestBuilder extends SoapRequestBuilder<API_Actions>{
   
   constructor() {
-    super(AmadeusNDCNameSpaces);
+    super(Soap_NameSpaces);
   }
 
-  getRequestByAction<Action extends keyof NDCAPIActions>(action: Action): this {
+  getRequestByAction<Action extends keyof API_Actions>(action: Action): this {
     switch (action) {
       case "search":
-        this.request = this.buildSearchRequest() as NDCAPIActions[Action];
+        this.request = this.buildSearchRequest() as API_Actions[Action];
         return this
       default:
         return this
@@ -36,26 +36,26 @@ export class NDCRequestBuilder extends SoapRequestBuilder<NDCAPIActions>{
 
   private getHeaders(): SoapHeader<RequestHeaders> {
     return {
-      prefix: AmadeusNDCNameSpaces.WSSE,
+      prefix: Soap_NameSpaces.WSSE,
       attributes: { "@_xmlns:wsse": "http://docs.oasis-open.org/wss/" },
       authentication: {
-        prefix: AmadeusNDCNameSpaces.WSSE,
+        prefix: Soap_NameSpaces.WSSE,
         attributes: { "@_mustUnderstand": "1" },
         token: {
-          prefix: AmadeusNDCNameSpaces.WSSE,
+          prefix: Soap_NameSpaces.WSSE,
           value: randomUUID(),
         },
         keepAlive: {
-          prefix: AmadeusNDCNameSpaces.WSSE,
+          prefix: Soap_NameSpaces.WSSE,
           value: 15,
         },
         createdAt: {
-          prefix: AmadeusNDCNameSpaces.WSSE,
+          prefix: Soap_NameSpaces.WSSE,
           value: new Date().toISOString(),
         },
       },
       session: {
-        prefix: AmadeusNDCNameSpaces.WSSE,
+        prefix: Soap_NameSpaces.WSSE,
         value: randomUUID(),
       },
     };
@@ -63,43 +63,43 @@ export class NDCRequestBuilder extends SoapRequestBuilder<NDCAPIActions>{
 
   private getSearchRequestBody(): SoapBody<SearchRequestBody> {
     return {
-      prefix: AmadeusNDCNameSpaces.N1,
+      prefix: Soap_NameSpaces.N1,
       attributes: { 
         "@_xmlns:n1": "http://www.iata.org/IATA/2015/EASD/00/IATA_OffersAndOrdersMessage" ,
         "@_xmlns:cns": "http://www.iata.org/IATA/2015/EASD/00/IATA_OffersAndOrdersCommonTypes"
       },
       origin: {
-        prefix: AmadeusNDCNameSpaces.CNS,
+        prefix: Soap_NameSpaces.CNS,
         value: "DEL",
       },
       destination: {
-        prefix: AmadeusNDCNameSpaces.CNS,
+        prefix: Soap_NameSpaces.CNS,
         value: "BOM",
       },
       date: {
-        prefix: AmadeusNDCNameSpaces.CNS,
+        prefix: Soap_NameSpaces.CNS,
         value: new Date().toDateString(),
       },
       pax: [
         {
-          prefix: AmadeusNDCNameSpaces.CNS,
+          prefix: Soap_NameSpaces.CNS,
           paxType: {
-            prefix: AmadeusNDCNameSpaces.CNS,
+            prefix: Soap_NameSpaces.CNS,
             value: "ADT",
           },
           count: {
-            prefix: AmadeusNDCNameSpaces.CNS,
+            prefix: Soap_NameSpaces.CNS,
             value: 1,
           },
         },
         {
-          prefix: AmadeusNDCNameSpaces.CNS,
+          prefix: Soap_NameSpaces.CNS,
           paxType: {
-            prefix: AmadeusNDCNameSpaces.CNS,
+            prefix: Soap_NameSpaces.CNS,
             value: "CHD"
           },
           count: {
-            prefix:AmadeusNDCNameSpaces.CNS,
+            prefix:Soap_NameSpaces.CNS,
             value:1
           }
         }
