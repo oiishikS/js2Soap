@@ -31,6 +31,8 @@ export type SoapData<T> = SoapMetaData & {
 };
 
 export type SoapMetaData = {
-  prefix: string;
-  attributes: Record<`@_${string}`, string>;
+  prefix?: string;
+  attributes?: Record<SoapAttribute, string>;
 };
+
+export type SoapAttribute = `@_${string}`
