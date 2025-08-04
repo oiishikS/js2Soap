@@ -1,43 +1,92 @@
-import { requestBuilder, transformForXml } from "./requestBuilder";
-import { AirShoppingRequest } from "./models/request/request.model";
-import { XMLBuilder, XMLValidator } from "fast-xml-parser";
-import * as fs from "fs";
-import * as path from "path";
+import { randomUUID } from "crypto";
+import { RequestHeaders } from "./readerHeader.types";
+import { SearchRequest, SearchRequestBody } from "./requestModel.types";
+import { SoapBody, SoapEnvelope, SoapHeader } from "./soap.types";
 
-const request = requestBuilder<AirShoppingRequest>();
+export const getRequest = (): SearchRequest => {
+  return {
+    "soap:Envelope": {
+      "soap:Header": getHeader(),
+      "soap:Body": getBody(),
+    },
+  };
+};
 
-const soapRequest = transformForXml(request);
+const getHeader = (): SoapHeader<RequestHeaders> => ({
+  prefix: "sec",
+  attributes: { "@_xmlns:wsse": "http://docs.oasis-open.org/wss/" },
+  authentication: {
+    prefix: "auth",
+    attributes: { "@_mustUnderstand": "1" },
+    token: {
+      prefix: "auth",
+      attributes: { "@_tokenType": "UUID" },
+      value: randomUUID(),
+    },
+    keepAlive: {
+      prefix: "auth",
+      attributes: { "@_unit": "minutes" },
+      value: 15,
+    },
+    createdAt: {
+      prefix: "auth",
+      attributes: { "@_tz": "UTC" },
+      value: new Date().toISOString(),
+    },
+  },
+  session: {
+    prefix: "sess",
+    attributes: { "@_idType": "GUID" },
+    value: randomUUID(),
+  },
+});
 
-const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: "@_" });
-const xml = builder.build(soapRequest);
-
-const isValid = XMLValidator.validate(xml);
-console.log("XML Valid:", isValid);
-
-// ✅ Pretty print helper
-function prettyPrintXml(xml: string): string {
-  const PADDING = "  "; // 2 spaces
-  const reg = /(>)(<)(\/*)/g;
-  let formatted = "";
-  let pad = 0;
-
-  xml.replace(reg, "$1\n$2$3").split("\n").forEach((node) => {
-    let indent = 0;
-    if (node.match(/^<\/\w/)) {
-      if (pad !== 0) pad -= 1;
-    } else if (node.match(/^<\w[^>]*[^\/]>.*$/)) {
-      indent = 1;
-    }
-    formatted += PADDING.repeat(pad) + node + "\n";
-    pad += indent;
-  });
-
-  return formatted.trim();
-}
-
-// ✅ Pretty print XML and write to output.xml
-const prettyXml = prettyPrintXml(xml);
-const outputPath = path.join(__dirname, "output.xml");
-
-fs.writeFileSync(outputPath, prettyXml, "utf-8");
-console.log(`✅ Pretty XML written to ${outputPath}`);
+const getBody = (): SoapBody<SearchRequestBody> => ({
+  prefix: "req",
+  attributes: { "@_xmlns": "http://airindia.com/NDC/Search" },
+  origin: {
+    prefix: "req",
+    attributes: { "@_city": "true" },
+    value: "BOM",
+  },
+  destination: {
+    prefix: "req",
+    attributes: { "@_city": "true" },
+    value: "DEL",
+  },
+  date: {
+    prefix: "req",
+    attributes: { "@_format": "yyyy-MM-dd" },
+    value: new Date().toISOString(),
+  },
+  pax: [
+    {
+      prefix: "pax",
+      attributes: { "@_id": "1" },
+      paxType: {
+        prefix: "pax",
+        attributes: { "@_code": "ADT" },
+        value: "ADT",
+      },
+      count: {
+        prefix: "pax",
+        attributes: { "@_num": "true" },
+        value: 1,
+      },
+    },
+    {
+      prefix: "pax",
+      attributes: { "@_id": "2" },
+      paxType: {
+        prefix: "pax",
+        attributes: { "@_code": "CHD" },
+        value: "CHD",
+      },
+      count: {
+        prefix: "pax",
+        attributes: { "@_num": "true" },
+        value: 1,
+      },
+    },
+  ],
+});
